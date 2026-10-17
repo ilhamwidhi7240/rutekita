@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f36b35">
+<meta name="description" content="RuteKita: perencana rute lari, sepeda, dan MTB dengan profil elevasi.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>RuteKita — Rute Lari & Sepeda</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f3f6fa;--card:#fff;--ink:#182235;--muted:#65718a;--accent:#f36b35;--line:#e2e8f0;--green:#138563;--shadow:0 5px 20px #1822350a}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:12px;position:sticky;top:0;z-index:1000}
+.brand{font-size:21px;font-weight:900;letter-spacing:-.8px}.brand span{color:var(--accent)}.subtitle{font-size:11px;color:var(--muted)}
+.headright{display:flex;gap:8px;align-items:center}.pill{font-size:11px;font-weight:800;background:#fff0e8;color:#b94a1d;padding:6px 8px;border-radius:999px}
+main{display:grid;grid-template-columns:370px minmax(0,1fr);min-height:calc(100vh - 64px)}aside{padding:14px;overflow:auto;max-height:calc(100vh - 64px)}.panel{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:15px;margin-bottom:12px;box-shadow:var(--shadow)}
+h2{font-size:15px;margin:0 0 10px;letter-spacing:-.2px}h3{font-size:13px;margin:0 0 8px}p{font-size:12px;line-height:1.55;color:var(--muted);margin:5px 0 10px}
+label{font-size:11px;font-weight:800;color:#58647b;display:block;margin:10px 0 5px}
+input,select{width:100%;border:1px solid #d9e1ec;border-radius:10px;padding:10px;font:inherit;font-size:13px;background:#fff;color:var(--ink)}
+button{border:0;border-radius:10px;padding:10px 11px;font-weight:800;cursor:pointer;font:inherit;font-size:12px;transition:transform .08s}button:active{transform:scale(.98)}button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--accent);color:#fff}.secondary{background:#edf1f7;color:#27334a}.dark{background:#182235;color:#fff}.green{background:#e5f6ef;color:#117452}.danger{background:#fff0e9;color:#b74720}
+.btnrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.btnrow button{flex:1}
+#map{height:calc(100vh - 64px);min-height:550px;background:#e8edf2}
+.status{font-size:11px;padding:9px 10px;border-radius:10px;background:#f0f4f9;color:#4c5a70;margin-top:10px;line-height:1.45}.status.good{background:#e7f7f0;color:#167553}.status.warn{background:#fff4e7;color:#97570f}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:#f6f8fb;border-radius:12px;padding:10px}.stat b{display:block;font-size:21px;letter-spacing:-.6px}.stat span{font-size:10px;color:var(--muted);font-weight:800}
+#profile{width:100%;height:145px;display:block}.mini{font-size:10px;color:var(--muted);line-height:1.5}.waypoints{font-size:11px;color:var(--muted);margin-top:8px}
+.mapTip{position:absolute;z-index:500;top:12px;right:12px;background:#fff;padding:9px 11px;border-radius:11px;box-shadow:0 4px 18px #17203318;font-size:11px;max-width:235px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:7px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.tabs{display:flex;gap:5px;margin-bottom:10px}.tabs button{flex:1;padding:8px 5px}.tabs .active{background:#182235;color:#fff}
+.historyItem{padding:9px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;font-size:11px}.historyItem strong{display:block;font-size:12px}.historyItem button{padding:6px 8px}
+details summary{font-size:12px;font-weight:800;cursor:pointer}.footnote{font-size:10px;line-height:1.5;color:#7b879a}
+@media(max-width:850px){header{height:58px;padding:0 12px}.brand{font-size:19px}main{grid-template-columns:1fr}#map{height:48vh;min-height:330px;order:1}aside{max-height:none;overflow:visible;order:2;padding:10px}.mapTip{top:8px;right:8px;max-width:175px} .headright .pill{display:none}}
+</style>
+</head>
+<body>
+<header>
+ <div><div class="brand">Rute<span>Kita</span> <span class="pill">BETA</span></div><div class="subtitle">Perencana rute lari, road bike & MTB</div></div>
+ <div class="headright"><button id="installBtn" class="secondary" hidden>Pasang aplikasi</button><button id="locTop" class="secondary">Lokasiku</button></div>
+</header>
+<main>
+<aside>
+ <section class="panel">
+  <h2>🗺️ Rancang rute</h2>
+  <p>Pilih titik awal dan tujuan dengan mengetuk peta. Untuk rute berputar, tambahkan titik-titik perantara mengikuti jalan lalu aktifkan kembali ke awal.</p>
+  <label for="activity">Jenis aktivitas</label><select id="activity"><option value="mtb">MTB / sepeda gunung</option><option value="bike">Sepeda jalan raya</option><option value="run">Lari</option><option value="walk">Jalan kaki</option></select>
+  <label for="rname">Nama rute</label><input id="rname" value="Rute latihan pagi" maxlength="70">
+  <label for="speed">Kecepatan rata-rata untuk estimasi</label><select id="speed"><option value="mtb">MTB — 12 km/jam</option><option value="bike">Sepeda jalan raya — 20 km/jam</option><option value="run">Lari — 8 km/jam</option><option value="walk">Jalan kaki — 5 km/jam</option></select>
+  <label style="display:flex;align-items:center;gap:8px;font-size:12px"><input id="roundtrip" type="checkbox" style="width:auto"> Kembali ke titik awal (loop)</label>
+  <div class="btnrow"><button id="routeBtn" class="primary">Buat rute otomatis</button><button id="undoBtn" class="secondary">Undo titik</button></div>
+  <div class="btnrow"><button id="locBtn" class="secondary">Tambah lokasiku</button><button id="clearBtn" class="danger">Hapus rute</button></div>
+  <div id="status" class="status">Ketuk peta untuk menambah titik. Minimal 2 titik untuk membuat rute otomatis.</div>
+  <div id="points" class="waypoints">Titik rute: 0</div>
+ </section>
+ <section class="panel">
+  <h2>📊 Ringkasan rute</h2>
+  <div class="stats">
+   <div class="stat"><b id="distance">—</b><span>JARAK (KM)</span></div>
+   <div class="stat"><b id="duration">—</b><span>ESTIMASI WAKTU</span></div>
+   <div class="stat"><b id="ascent">—</b><span>TOTAL TANJAKAN</span></div>
+   <div class="stat"><b id="descent">—</b><span>TOTAL TURUNAN</span></div>
+   <div class="stat"><b id="highest">—</b><span>ELEVASI TERTINGGI</span></div>
+   <div class="stat"><b id="lowest">—</b><span>ELEVASI TERENDAH</span></div>
+  </div>
+  <div class="legend"><span><i class="dot" style="background:#f36b35"></i>Rute</span><span><i class="dot" style="background:#178b67"></i>Mulai</span><span><i class="dot" style="background:#3267d5"></i>Selesai</span></div>
+  <p class="mini" id="statsNote">Jarak mengikuti garis rute dari layanan routing. Waktu hanyalah perkiraan.</p>
+ </section>
+ <section class="panel">
+  <h2>⛰️ Profil elevasi</h2>
+  <canvas id="profile" width="640" height="180"></canvas>
+  <div class="mini" id="profileNote">Buat rute untuk mengambil sampel elevasi.</div>
+ </section>
+ <section class="panel">
+  <h2>🏁 Aktivitas GPS</h2>
+  <p>Rekam perjalanan langsung saat browser terbuka. Perlu izin lokasi dan HTTPS. Ini bukan rekaman latar belakang seperti aplikasi native.</p>
+  <div class="stats"><div class="stat"><b id="recDistance">0.00</b><span>KM DIREKAM</span></div><div class="stat"><b id="recTime">00:00</b><span>DURASI</span></div></div>
+  <div class="btnrow"><button id="recordBtn" class="primary">Mulai rekam</button><button id="stopBtn" class="secondary" disabled>Berhenti & simpan</button></div>
+  <div id="recordStatus" class="status">Belum merekam aktivitas.</div>
+ </section>
+ <section class="panel">
+  <h2>💾 Rute tersimpan</h2>
+  <div class="btnrow"><button id="saveBtn" class="secondary">Simpan rute ini</button><button id="gpxBtn" class="primary">Unduh GPX</button></div>
+  <div class="btnrow"><button id="jsonBtn" class="secondary">Unduh GeoJSON</button><button id="loadBtn" class="secondary">Muat terakhir</button></div>
+  <div id="savedList" style="margin-top:8px"></div>
+ </section>
+ <section class="panel">
+  <h2>🧭 Fitur MTB & catatan</h2>
+  <p>Profil elevasi dan total tanjakan berguna untuk menilai beratnya rute. Data peta mungkin tidak membedakan jalur tanah, aspal, jalan pribadi, atau trail resmi dengan sempurna.</p>
+  <details><summary>Bagian yang memakai layanan eksternal</summary>
+   <p><b>Peta:</b> OpenStreetMap melalui tile publik.</p>
+   <p><b>Routing:</b> server OSRM / OpenStreetMap Routing Project untuk mengikuti jaringan jalan. Profil sepeda dan lari yang tersedia tergantung server; fallback dapat memakai rute kendaraan dan tidak ideal untuk MTB.</p>
+   <p><b>Elevasi:</b> Open-Elevation API. Hasil berupa perkiraan, bukan data survei atau pengukuran GPS barometrik.</p>
+   <p><b>Penyimpanan:</b> lokal di browser. Tidak ada akun/cloud, sinkronisasi, feed sosial, segmen kompetitif, atau database pengguna pada versi ini.</p>
+  </details>
+  <p class="footnote">Peta © OpenStreetMap contributors. Aplikasi ini prototipe mandiri dan bukan produk resmi Strava. Routing/elevasi membutuhkan internet dan layanan publik bisa membatasi permintaan.</p>
+ </section>
+</aside>
+<div style="position:relative"><div id="map"></div><div class="mapTip">📍 Ketuk peta untuk titik rute. Perbesar peta untuk memilih jalan dengan tepat.</div></div>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const map=L.map('map').setView([-8.095,112.16],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+let points=[],markers=[],routeLine=null,routeCoords=[],elevations=[],lastFeature=null,recording=false,watchId=null,recordPoints=[],recordStart=0,recordTimer=null,recordLine=null;
+const storageKey='rutekita_v2_routes',activityKey='rutekita_activities';
+function status(msg,kind=''){ $('status').className='status '+kind; $('status').textContent=msg}
+function fmt(n,d=1){return Number.isFinite(n)?n.toFixed(d):'—'}
+function dist(a,b){const R=6371000,rad=x=>x*Math.PI/180,d1=rad(b.lat-a.lat),d2=rad(b.lng-a.lng),z=Math.sin(d1/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(d2/2)**2;return 2*R*Math.asin(Math.sqrt(z))}
+function totalDist(coords){let n=0;for(let i=1;i<coords.length;i++)n+=dist({lat:coords[i-1][1],lng:coords[i-1][0]},{lat:coords[i][1],lng:coords[i][0]});return n}
+function redrawPoints(){markers.forEach(m=>map.removeLayer(m));markers=[];points.forEach((p,i)=>{const color=i===0?'#138563':i===points.length-1?'#3267d5':'#f36b35';markers.push(L.circleMarker([p.lat,p.lng],{radius:7,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(map).bindTooltip(i===0?'Mulai':i===points.length-1?'Tujuan':'Titik '+(i+1))) });$('points').textContent='Titik rute: '+points.length+(points.length?' · '+points.map((p,i)=>(i+1)+': '+p.lat.toFixed(4)+', '+p.lng.toFixed(4)).join(' | '):'')}
+function resetStats(){['distance','duration','ascent','descent','highest','lowest'].forEach(x=>$(x).textContent='—');drawProfile([])}
+map.on('click',e=>{points.push({lat:e.latlng.lat,lng:e.latlng.lng});redrawPoints();status(points.length<2?'Tambahkan minimal satu titik lagi.':'Titik siap. Tekan “Buat rute otomatis”.','good')});
+$('undoBtn').onclick=()=>{points.pop();redrawPoints();status('Titik terakhir dihapus.')};
+$('clearBtn').onclick=()=>{points=[];routeCoords=[];elevations=[];lastFeature=null;markers.forEach(m=>map.removeLayer(m));markers=[];if(routeLine)map.removeLayer(routeLine);routeLine=null;redrawPoints();resetStats();status('Rute dihapus.')};
+function locate(add){if(!navigator.geolocation){status('Browser tidak mendukung geolokasi.','warn');return}status('Meminta izin lokasi…');navigator.geolocation.getCurrentPosition(pos=>{const p={lat:pos.coords.latitude,lng:pos.coords.longitude};map.setView([p.lat,p.lng],15);if(add){points.push(p);redrawPoints();status('Lokasi ditambahkan sebagai titik.','good')}else status('Peta dipusatkan ke lokasimu.','good')},()=>status('Lokasi gagal diakses. Izinkan akses lokasi dan pastikan GPS aktif.','warn'),{enableHighAccuracy:true,timeout:15000})}
+$('locBtn').onclick=()=>locate(true);$('locTop').onclick=()=>locate(false);
+$('activity').onchange=()=>{$('speed').value=$('activity').value};
+async function makeRoute(){
+ if(points.length<2){status('Tambahkan minimal 2 titik pada peta.','warn');return}
+ let waypoints=points.map(p=>({...p}));if($('roundtrip').checked&&waypoints.length>2){const a=waypoints[0],b=waypoints[waypoints.length-1];if(a.lat!==b.lat||a.lng!==b.lng)waypoints.push({...a})}
+ status('Meminta rute otomatis…');$('routeBtn').disabled=true;
+ const coords=waypoints.map(p=>p.lng+','+p.lat).join(';');
+ const act=$('activity').value;
+ // Public OSM routing servers. Routing profile availability varies; OSRM driving fallback follows mapped roads but isn't a true MTB/foot profile.
+ const urls=[
+ `https://routing.openstreetmap.de/routed-${act==='run'||act==='walk'?'foot':'bike'}/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`,
+ `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`
+ ];
+ let data=null;
+ for(const url of urls){try{const r=await fetch(url);if(!r.ok)continue;const j=await r.json();if(j.code==='Ok'&&j.routes?.[0]){data=j;break}}catch(e){}}
+ if(data){routeCoords=data.routes[0].geometry.coordinates;lastFeature={type:'Feature',properties:{name:$('rname').value,activity:act,source:'routing service'},geometry:{type:'LineString',coordinates:routeCoords}};status('Rute otomatis ditemukan. Mengambil elevasi…','good')}
+ else{routeCoords=waypoints.map(p=>[p.lng,p.lat]);lastFeature={type:'Feature',properties:{name:$('rname').value,activity:act,note:'Fallback garis lurus/manual; routing service unavailable'},geometry:{type:'LineString',coordinates:routeCoords}};status('Routing tidak tersedia. Garis antar titik ditampilkan, bukan rute jalan yang valid. Coba lagi atau gunakan titik lebih dekat ke jalan.','warn')}
+ if(routeLine)map.removeLayer(routeLine);routeLine=L.geoJSON(lastFeature,{style:{color:'#f36b35',weight:5,opacity:.92}}).addTo(map);redrawPoints();map.fitBounds(routeLine.getBounds(),{padding:[30,30]});
+ const meters=totalDist(routeCoords);$('distance').textContent=fmt(meters/1000,2);
+ const speeds={mtb:12,bike:20,run:8,walk:5};const mins=meters/1000/speeds[$('speed').value];const totalMin=mins*60;$('duration').textContent=totalMin<60?Math.round(totalMin)+' mnt':Math.floor(totalMin/60)+' j '+Math.round(totalMin%60)+' mnt';
+ $('routeBtn').disabled=false;await getElevations(routeCoords);
+}
+$('routeBtn').onclick=makeRoute;
+async function getElevations(coords){
+ let sampled=[];const n=Math.min(80,coords.length);if(coords.length<=n)sampled=coords;else for(let i=0;i<n;i++)sampled.push(coords[Math.round(i*(coords.length-1)/(n-1))]);
+ try{const locations=sampled.map(c=>({latitude:c[1],longitude:c[0]}));const r=await fetch('https://api.open-elevation.com/api/v1/lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({locations})});if(!r.ok)throw Error('elevation API error');const j=await r.json();elevations=(j.results||[]).map((v,i)=>({distance:totalDist(sampled.slice(0,i+1))/1000,elevation:Number(v.elevation)})).filter(x=>Number.isFinite(x.elevation));if(elevations.length<2)throw Error('no elevation');
+ let up=0,down=0;for(let i=1;i<elevations.length;i++){const d=elevations[i].elevation-elevations[i-1].elevation;if(d>0)up+=d;else down-=d}const vals=elevations.map(x=>x.elevation);$('ascent').textContent=Math.round(up)+' m';$('descent').textContent=Math.round(down)+' m';$('highest').textContent=Math.round(Math.max(...vals))+' m';$('lowest').textContent=Math.round(Math.min(...vals))+' m';$('profileNote').textContent='Elevasi perkiraan dari Open-Elevation; jumlah tanjakan/turunan bergantung pada kualitas data dan interval sampel.';drawProfile(elevations);status('Rute dan profil elevasi selesai.','good')
+ }catch(e){elevations=[];['ascent','descent','highest','lowest'].forEach(x=>$(x).textContent='N/A');$('profileNote').textContent='Data elevasi gagal diambil. Coba ulangi nanti; layanan publik dapat sibuk atau tidak tersedia.';drawProfile([])}
+}
+function drawProfile(data){const c=$('profile'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.fillStyle='#f7f9fc';ctx.fillRect(0,0,w,h);if(!data||data.length<2){ctx.fillStyle='#7c879b';ctx.font='14px sans-serif';ctx.fillText('Profil elevasi belum tersedia',18,85);return}const vals=data.map(x=>x.elevation),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(1,max-min),x=i=>34+i*(w-48)/(data.length-1),y=v=>h-24-(v-min)/range*(h-48);ctx.strokeStyle='#dce3ed';for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(34,i*h/4);ctx.lineTo(w-12,i*h/4);ctx.stroke()}ctx.beginPath();data.forEach((d,i)=>i?ctx.lineTo(x(i),y(d.elevation)):ctx.moveTo(x(i),y(d.elevation)));ctx.lineTo(x(data.length-1),h-24);ctx.lineTo(x(0),h-24);ctx.closePath();ctx.fillStyle='rgba(243,107,53,.15)';ctx.fill();ctx.beginPath();data.forEach((d,i)=>i?ctx.lineTo(x(i),y(d.elevation)):ctx.moveTo(x(i),y(d.elevation)));ctx.strokeStyle='#f36b35';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#65718a';ctx.font='11px sans-serif';ctx.fillText(Math.round(max)+' m',3,14);ctx.fillText(Math.round(min)+' m',3,h-8);ctx.fillText('0 km',34,h-5);ctx.fillText(fmt(data[data.length-1].distance,1)+' km',w-65,h-5)}
+function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function getFeature(){if(!lastFeature){if(points.length<2){status('Buat rute dulu sebelum ekspor.','warn');return null}lastFeature={type:'Feature',properties:{name:$('rname').value,activity:$('activity').value},geometry:{type:'LineString',coordinates:points.map(p=>[p.lng,p.lat])}}}lastFeature.properties.name=$('rname').value;return lastFeature}
+$('gpxBtn').onclick=()=>{const f=getFeature();if(!f)return;const trk=f.geometry.coordinates.map(c=>`<trkpt lat="${c[1]}" lon="${c[0]}"></trkpt>`).join('');download('rutekita.gpx',`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="RuteKita" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${$('rname').value.replace(/[<>&"]/g,'')}</name><trkseg>${trk}</trkseg></trk></gpx>`,'application/gpx+xml')};
+$('jsonBtn').onclick=()=>{const f=getFeature();if(f)download('rutekita.geojson',JSON.stringify(f,null,2),'application/geo+json')};
+function saveRoute(){const f=getFeature();if(!f)return;const all=JSON.parse(localStorage.getItem(storageKey)||'[]');all.unshift({id:Date.now(),savedAt:new Date().toISOString(),feature:f,points});localStorage.setItem(storageKey,JSON.stringify(all.slice(0,100)));renderSaved();status('Rute disimpan di browser ini.','good')}
+function renderSaved(){const all=JSON.parse(localStorage.getItem(storageKey)||'[]');const el=$('savedList');el.innerHTML='';if(!all.length){el.textContent='Belum ada rute tersimpan.';el.className='mini';return}all.slice(0,6).forEach(item=>{const d=document.createElement('div');d.className='historyItem';const info=document.createElement('div');const strong=document.createElement('strong');strong.textContent=item.feature.properties.name||'Rute tanpa nama';const sub=document.createElement('span');sub.className='mini';sub.textContent=new Date(item.savedAt).toLocaleDateString('id-ID')+' · '+(totalDist(item.feature.geometry.coordinates)/1000).toFixed(2)+' km';info.append(strong,sub);const btn=document.createElement('button');btn.className='secondary';btn.textContent='Muat';btn.onclick=()=>loadRoute(item);d.append(info,btn);el.append(d)})}
+function loadRoute(item){points=item.points||item.feature.geometry.coordinates.map(c=>({lat:c[1],lng:c[0]}));lastFeature=item.feature;routeCoords=item.feature.geometry.coordinates;$('rname').value=item.feature.properties.name||'Rute tersimpan';if(routeLine)map.removeLayer(routeLine);routeLine=L.geoJSON(lastFeature,{style:{color:'#f36b35',weight:5}}).addTo(map);redrawPoints();map.fitBounds(routeLine.getBounds(),{padding:[25,25]});$('distance').textContent=fmt(totalDist(routeCoords)/1000,2);status('Rute dimuat. Tekan buat rute untuk memperbarui elevasi.','good')}
+$('saveBtn').onclick=saveRoute;$('loadBtn').onclick=()=>{const all=JSON.parse(localStorage.getItem(storageKey)||'[]');if(all.length)loadRoute(all[0]);else status('Belum ada rute tersimpan.','warn')};
+function updateRecordStats(){const meters=totalDist(recordPoints.map(p=>[p.lng,p.lat]));$('recDistance').textContent=(meters/1000).toFixed(2);const secs=Math.max(0,Math.floor((Date.now()-recordStart)/1000));$('recTime').textContent=String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0')}
+$('recordBtn').onclick=()=>{if(!navigator.geolocation){$('recordStatus').textContent='Browser tidak mendukung GPS.';return}recordPoints=[];recordStart=Date.now();recording=true;$('recordBtn').disabled=true;$('stopBtn').disabled=false;$('recordStatus').textContent='Meminta lokasi GPS…';recordTimer=setInterval(updateRecordStats,1000);watchId=navigator.geolocation.watchPosition(pos=>{const p={lat:pos.coords.latitude,lng:pos.coords.longitude,time:new Date(pos.timestamp).toISOString(),accuracy:pos.coords.accuracy};if(!recordPoints.length||dist(recordPoints[recordPoints.length-1],p)>4)recordPoints.push(p);updateRecordStats();if(recordLine)map.removeLayer(recordLine);if(recordPoints.length>1)recordLine=L.polyline(recordPoints.map(p=>[p.lat,p.lng]),{color:'#138563',weight:4}).addTo(map);if(recordPoints.length===1)map.setView([p.lat,p.lng],16);$('recordStatus').textContent='Merekam GPS · akurasi terakhir ±'+Math.round(pos.coords.accuracy)+' m.'},err=>{$('recordStatus').textContent='GPS error: '+err.message+' Pastikan HTTPS dan izin lokasi aktif.'},{enableHighAccuracy:true,maximumAge:3000,timeout:15000})};
+$('stopBtn').onclick=()=>{if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;clearInterval(recordTimer);recording=false;$('recordBtn').disabled=false;$('stopBtn').disabled=true;updateRecordStats();const all=JSON.parse(localStorage.getItem(activityKey)||'[]');if(recordPoints.length>1){all.unshift({name:$('rname').value||'Aktivitas GPS',savedAt:new Date().toISOString(),durationSeconds:Math.floor((Date.now()-recordStart)/1000),points:recordPoints});localStorage.setItem(activityKey,JSON.stringify(all.slice(0,100)));download('aktivitas-rutekita.gpx',`<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="RuteKita" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Aktivitas RuteKita</name><trkseg>${recordPoints.map(p=>`<trkpt lat="${p.lat}" lon="${p.lng}"><time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`,'application/gpx+xml');$('recordStatus').textContent='Aktivitas tersimpan lokal dan file GPX diunduh.'}else $('recordStatus').textContent='Rekaman terlalu pendek untuk disimpan.'};
+let deferredPrompt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').hidden=false});$('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('installBtn').hidden=true}else alert('Di Chrome Android: buka menu ⋮ lalu pilih “Tambahkan ke layar utama” atau “Install app”.')};
+if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+renderSaved();drawProfile([]);
+</script>
+</body>
+</html>

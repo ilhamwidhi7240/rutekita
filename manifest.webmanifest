@@ -1,0 +1,19 @@
+{
+  "name": "RuteKita — Rute Lari & Sepeda",
+  "short_name": "RuteKita",
+  "description": "Perencana rute lari, road bike, dan MTB dengan profil elevasi.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fa",
+  "theme_color": "#f36b35",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
